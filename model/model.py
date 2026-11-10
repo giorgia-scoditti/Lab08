@@ -26,6 +26,17 @@ class Model:
         :return: lista di tuple --> (nome del distributore, media), es. (Distributore A, 1.789)
         """
         # TODO
+        risultato = []
+        for distributore in self._distributori:
+            prezzi = distributore.get_prezzi()
+
+            prezzi_mese = [p.prezzo_litro for p in prezzi if p.data.month == mese]
+            if prezzi_mese:
+                media = sum(prezzi_mese) / len(prezzi_mese)
+                risultato.append((distributore.nome, round(media, 3)))
+            else:
+                risultato.append((distributore.nome, 0.0))
+        return risultato
 
     def get_sequenza_ottima(self, mese:int):
         """
@@ -47,6 +58,30 @@ class Model:
     def __ricorsione(self, sequenza_parziale, giorno, ultimo_distributore, costo_corrente, prezzi_settimana):
         """ Implementa la ricorsione """
         # TODO
+        if giorno > 7:
+            if self.__costo_ottimo == -1 or costo_corrente < self.__costo_ottimo:
+                self.__costo_ottimo = costo_corrente
+                self.__sequenza_ottima = list(sequenza_parziale)
+            return
+
+        for distributore in self._distributori:
+            prezzi_giorno = [p.prezzo_litro for p in prezzi_settimana[distributore.id] if p.data.day == giorno]
+
+            if not prezzi_giorno:
+                continue
+
+            prezzo_litro = prezzi_giorno[0]
+
+            costo_spostamento = 0.0
+            if ultimo_distributore is not None and ultimo_distributore != distributore.id:
+                costo_spostamento = 10.0
+
+            litri = 50
+            costo_giornaliero = (prezzo_litro * litri) + costo_spostamento
+            sequenza_parziale.append((giorno, distributore.id, prezzo_litro))
+            self.__ricorsione((giorno + 1, sequenza_parziale, distributore.id, costo_corrente + costo_giornaliero, prezzi_settimana))
+            sequenza_parziale.pop()
+
 
     def __get_prezzi_prima_settimana_mese(self, mese: int):
         """
@@ -54,3 +89,10 @@ class Model:
         :return: un dizionario: {id_distributore: [prezzo_giorno1, ..., prezzo_giorno7]}
         """
         # TODO
+        prezzi_settimana = {}
+        for distributore in self._distributori:
+            prezzi = distributore.get_prezzi()
+
+            prezzi_filtrati = [p for p in prezzi if p.data.month == mese and 1 <= p.data.day <= 7]
+            prezzi_settimana[distributore.id] = prezzi_filtrati
+        return prezzi_settimana
